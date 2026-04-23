@@ -30,7 +30,6 @@ Talo/
     ├── main.py                   # ~270行，CLI 入口
     ├── paths.py                  # 资源路径解析（PyInstaller / 开发双兼容）
     ├── AGENTS.md                 # 本文件（项目规范文档）
-    ├── download_tarot_meanings.py # 一次性脚本：下载英文牌义
     ├── scripts/
     │   └── merge_cards_data.py   # 合并/扩展 cards.json 字段
     ├── engine/
