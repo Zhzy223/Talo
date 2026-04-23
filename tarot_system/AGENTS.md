@@ -19,32 +19,39 @@
 ## 2. 文件结构
 
 ```
-tarot_system/
-├── gui.py                      # ~1378行，customtkinter GUI
-├── main.py                     # ~270行，CLI 入口
-├── AGENTS.md                   # 本文件（项目规范文档）
-├── download_tarot_meanings.py  # 一次性脚本：下载英文牌义
-├── scripts/
-│   └── merge_cards_data.py     # 合并/扩展 cards.json 字段
-├── engine/
-│   ├── deck.py                 # 188行，牌组、洗牌、抽牌
-│   ├── entropy.py              # 186行，熵池、SecureRNG、PhysicalRNG
-│   └── history.py              # 111行，JSONL 历史记录
-├── core/
-│   ├── calculator.py           # 168行，8维评分计算器
-│   ├── interpreter.py          # 274行，解读文本渲染引擎
-│   └── exporter.py             # 78行，Markdown/纯文本导出
-├── tests/
-│   └── test_core.py            # 680行，34项 unittest
+Talo/
+├── tarot.spec                    # PyInstaller 打包配置
+├── .github/workflows/build.yml   # GitHub Actions 自动双平台构建
+├── .gitignore                    # Git 忽略规则
 ├── data/
-│   ├── cards.json              # 78张牌（含向量、元素、占星）
-│   ├── spreads.json            # 牌阵配置
-│   ├── interactions.json       # 特殊牌对关联权重
-│   ├── special_pairs.json      # 条件触发特殊文本
-│   └── history.jsonl           # 历史记录（自动创建）
-└── assets/
-    └── cards/
-        ├── 0.png ~ 77.png      # 78张 Rider-Waite 图像
+│   └── cards_en.json             # 英文牌义源数据（合并脚本用）
+└── tarot_system/
+    ├── gui.py                    # ~1378行，customtkinter GUI
+    ├── main.py                   # ~270行，CLI 入口
+    ├── paths.py                  # 资源路径解析（PyInstaller / 开发双兼容）
+    ├── AGENTS.md                 # 本文件（项目规范文档）
+    ├── download_tarot_meanings.py # 一次性脚本：下载英文牌义
+    ├── scripts/
+    │   └── merge_cards_data.py   # 合并/扩展 cards.json 字段
+    ├── engine/
+    │   ├── deck.py               # 188行，牌组、洗牌、抽牌
+    │   ├── entropy.py            # 186行，熵池、SecureRNG、PhysicalRNG
+    │   └── history.py            # 111行，JSONL 历史记录
+    ├── core/
+    │   ├── calculator.py         # 168行，8维评分计算器
+    │   ├── interpreter.py        # 274行，解读文本渲染引擎
+    │   └── exporter.py           # 78行，Markdown/纯文本导出
+    ├── tests/
+    │   └── test_core.py          # 680行，34项 unittest
+    ├── data/
+    │   ├── cards.json            # 78张牌（含向量、元素、占星）
+    │   ├── spreads.json          # 牌阵配置
+    │   ├── interactions.json     # 特殊牌对关联权重
+    │   ├── special_pairs.json    # 条件触发特殊文本
+    │   └── history.jsonl         # 历史记录（自动创建，不提交 git）
+    └── assets/
+        └── cards/
+            ├── 0.png ~ 77.png    # 78张 Rider-Waite 图像
 ```
 
 ## 3. 核心模块详解
@@ -265,6 +272,7 @@ class CountingDeck(Deck):
 - `*args, **kwargs` 需标注 `Any` 类型
 - 可选依赖使用 `try/except ImportError` + `# noqa: F401`
 - 全部使用 `pathlib.Path`，禁止硬编码路径分隔符
+- **资源路径统一走 `tarot_system/paths.py`**：`resource_path()` 用于只读资源，`user_data_dir()` 用于可写数据（历史记录）
 - JSON 加载后增加 `None` 保护
 - **禁止** `[]`/`{}`/`list()`/`dict()` 作为函数默认参数，使用 `None` + 内部初始化
 - 循环中创建闭包时，优先使用 `functools.partial` 而非 lambda 默认参数
@@ -304,8 +312,52 @@ python tarot_system/main.py --rng physical
 # 测试
 python -m unittest tarot_system.tests.test_core
 python -m unittest tarot_system.tests.test_core -v
+
+# 本地打包（macOS）
+pyinstaller tarot.spec --clean
+# 输出: dist/塔罗牌占卜.app
+```
+
+## 10. 打包与发布
+
+### 10.1 资源路径策略
+
+所有模块通过 `tarot_system/paths.py` 统一解析路径：
+
+```python
+from tarot_system.paths import resource_path, user_data_dir
+
+# 只读资源（cards.json、牌图等）
+resource_path("data/cards.json")
+resource_path("assets/cards/0.png")
+
+# 可写数据（历史记录）— 必须放在用户目录，避免 macOS .app 只读崩溃
+user_data_dir()  # macOS: ~/Library/Application Support/塔罗牌占卜/
+```
+
+### 10.2 PyInstaller 配置 (`tarot.spec`)
+
+- **入口**: `tarot_system/gui.py`
+- **模式**: onedir（macOS `.app` / Windows 文件夹）
+- **pathex**: `[project_root, tarot_system/]` — 兼容 `tarot_system.xxx` 和 `engine.xxx` 两种导入风格
+- **datas**: `data/` → `_MEIPASS/data/`，`assets/` → `_MEIPASS/assets/`
+- **hiddenimports**: `customtkinter`, `PIL`, `PIL._imagingtk`, `PIL._tkinter_finder`
+- **excludes**: `matplotlib`, `numpy`, `pandas`, `scipy`
+- **包含**: `pyaudio` + `libportaudio.2.dylib`（麦克风噪声增强功能）
+
+### 10.3 GitHub Actions (`.github/workflows/build.yml`)
+
+推 `v*` tag 自动触发：
+1. `build-macos` — 安装 `portaudio` + `pyaudio` → 打包 → 上传 `.app`
+2. `build-windows` — 安装 `pyaudio` → 打包 → 上传文件夹
+3. `release` — 下载 artifact → 压缩为 zip → `gh release create` 发布
+
+**推 tag 命令**:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ## 10. 当前状态
 
-所有核心功能就绪，34 项测试全部通过，主要 IDE 警告已清理。项目处于阶段性收尾状态，可进入新功能开发或维护阶段。
+所有核心功能就绪，34 项测试全部通过。已完成 PyInstaller 打包配置与 GitHub Actions 自动构建流水线，本地 `.app` 验证通过（GUI、资源加载、麦克风功能均正常）。项目待推送到 GitHub 并打 tag 触发首次自动发布。
