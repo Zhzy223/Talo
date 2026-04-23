@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Data (history is user-generated, should not be committed)
+tarot_system/data/history.jsonl
+
+# Virtual environments
+venv/
+.venv/
