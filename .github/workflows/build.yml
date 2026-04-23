@@ -15,7 +15,7 @@ jobs:
           python-version: '3.11'
       - run: brew install portaudio
       - run: pip install pyinstaller customtkinter Pillow pyaudio
-      - run: pyinstaller tarot.spec --clean
+      - run: pyinstaller tarot.spec --clean --noconfirm
       - uses: actions/upload-artifact@v4
         with:
           name: tarot-macos
@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install pyinstaller customtkinter Pillow pyaudio
-      - run: pyinstaller tarot.spec --clean
+      - run: pyinstaller tarot.spec --clean --noconfirm
       - uses: actions/upload-artifact@v4
         with:
           name: tarot-windows
@@ -50,11 +50,11 @@ jobs:
           zip -r ../塔罗牌占卜-mac.zip tarot-macos/
           cd tarot-windows && zip -r ../塔罗牌占卜-win.zip .
       - name: Create Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "Release ${{ github.ref_name }}" \
-            --generate-notes \
-            "塔罗牌占卜-mac.zip" \
-            "塔罗牌占卜-win.zip"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            塔罗牌占卜-mac.zip
+            塔罗牌占卜-win.zip
