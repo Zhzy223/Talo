@@ -353,8 +353,8 @@ user_data_dir()  # macOS: ~/Library/Application Support/塔罗牌占卜/
 
 **推 tag 命令**:
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 ## 10. 当前状态

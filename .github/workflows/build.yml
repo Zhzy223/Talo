@@ -47,8 +47,8 @@ jobs:
           path: artifacts
       - run: |
           cd artifacts
-          zip -r ../塔罗牌占卜-mac.zip tarot-macos/
-          cd tarot-windows && zip -r ../塔罗牌占卜-win.zip .
+          zip -r ../tarot-macos.zip tarot-macos/
+          zip -r ../tarot-windows.zip tarot-windows/
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -56,5 +56,5 @@ jobs:
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            塔罗牌占卜-mac.zip
-            塔罗牌占卜-win.zip
+            tarot-macos.zip
+            tarot-windows.zip
